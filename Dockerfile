@@ -1,6 +1,7 @@
 FROM composer:2 AS php-dependencies
 WORKDIR /build
 COPY composer.json composer.lock ./
+COPY app/controllers ./app/controllers
 RUN composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
 
 FROM php:8.3-apache AS runtime
