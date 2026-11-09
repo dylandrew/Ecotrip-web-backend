@@ -1,0 +1,20 @@
+ALTER TABLE users
+  MODIFY COLUMN password_hash VARCHAR(255) NULL,
+  ADD COLUMN google_sub VARCHAR(255) NULL UNIQUE,
+  ADD COLUMN address VARCHAR(255) NULL;
+
+CREATE TABLE password_reset_otps (
+  email VARCHAR(150) PRIMARY KEY,
+  user_id INT NOT NULL,
+  otp_hash VARCHAR(255) NOT NULL,
+  expires_at DATETIME NOT NULL,
+  requested_at DATETIME NOT NULL,
+  attempts TINYINT UNSIGNED NOT NULL DEFAULT 0,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE paymongo_webhook_events (
+  event_id VARCHAR(100) PRIMARY KEY,
+  event_type VARCHAR(100) NOT NULL,
+  processed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
