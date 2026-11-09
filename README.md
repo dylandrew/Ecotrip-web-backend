@@ -57,6 +57,10 @@ Journal photo storage uses the local `JOURNAL_STORAGE_DRIVER` by default. Additi
 
 ---
 
+## Traveler experiences
+
+Travelers can copy a publicly shared completed trip into a new private draft from the Traveler experiences page. They choose their own dates, budget, and traveler count; copied itinerary stops remain editable, and the draft is never published automatically. Admins can review completed trips and stops in the Experiences section, edit shared notes and trip ratings, publish or hide eligible experiences, and remove shared content without deleting the traveler's trip or itinerary. These features use the existing trip-experience columns; an existing database should have the trip-experiences and trip-experience-rating upgrades applied.
+
 ## Installation
 
 **Clone the repository:**

@@ -146,6 +146,106 @@ class Trip_model extends Model {
         return array_slice(array_merge($trip_references, $items), 0, 50);
     }
 
+    public function find_shared_trip_for_copy($id) {
+        return $this->db->table('trips')
+            ->where('id', $id)
+            ->where('status', 'completed')
+            ->where('share_experience', 1)
+            ->limit(1)
+            ->get();
+    }
+
+    public function shared_trip_items_for_copy($trip_id) {
+        return $this->db->table('itinerary_items')
+            ->select('day_number, item_type, description, start_time, est_cost, est_co2_kg')
+            ->where('trip_id', $trip_id)
+            ->order_by('day_number')
+            ->order_by('start_time')
+            ->get_all();
+    }
+
+    public function all_experiences_for_admin() {
+        $trips = $this->db->table('trips t')
+            ->select('t.id, t.title, t.destination, t.start_date, t.end_date, t.experience_notes, t.experience_rating, t.share_experience, t.user_id, u.name AS traveler_name, u.email AS traveler_email')
+            ->join('users u', 'u.id = t.user_id')
+            ->where('t.status', 'completed')
+            ->order_by('t.end_date', 'DESC')
+            ->get_all();
+        foreach ($trips as &$trip) {
+            $trip['record_type'] = 'trip';
+            $trip['reference_title'] = $trip['title'];
+        }
+        unset($trip);
+
+        $stops = $this->db->table('itinerary_items i')
+            ->select('i.id, i.trip_id, i.day_number, i.item_type, i.description, i.experience_notes, i.share_experience, i.completed, t.title AS trip_title, t.destination, t.start_date, t.end_date, t.user_id, u.name AS traveler_name, u.email AS traveler_email')
+            ->join('trips t', 't.id = i.trip_id')
+            ->join('users u', 'u.id = t.user_id')
+            ->where('i.completed', 1)
+            ->order_by('t.end_date', 'DESC')
+            ->order_by('i.day_number')
+            ->order_by('i.start_time')
+            ->get_all();
+        foreach ($stops as &$stop) {
+            $stop['record_type'] = 'stop';
+            $stop['reference_title'] = $stop['description'];
+            $stop['experience_rating'] = null;
+        }
+        unset($stop);
+
+        return array_merge($trips, $stops);
+    }
+
+    public function update_trip_experience_for_admin($id, $share, $notes, $rating) {
+        return $this->db->table('trips')
+            ->where('id', $id)
+            ->where('status', 'completed')
+            ->update([
+                'share_experience' => (int) $share,
+                'experience_notes' => $notes !== '' ? $notes : null,
+                'experience_rating' => $rating,
+            ]) !== false;
+    }
+
+    public function find_item_for_admin($id) {
+        return $this->db->table('itinerary_items')
+            ->where('id', $id)
+            ->where('completed', 1)
+            ->limit(1)
+            ->get();
+    }
+
+    public function update_item_experience_for_admin($id, $share, $notes) {
+        return $this->db->table('itinerary_items')
+            ->where('id', $id)
+            ->where('completed', 1)
+            ->update([
+                'share_experience' => (int) $share,
+                'experience_notes' => $notes !== '' ? $notes : null,
+            ]) !== false;
+    }
+
+    public function delete_trip_experience_for_admin($id) {
+        return $this->db->table('trips')
+            ->where('id', $id)
+            ->where('status', 'completed')
+            ->update([
+                'share_experience' => 0,
+                'experience_notes' => null,
+                'experience_rating' => null,
+            ]) !== false;
+    }
+
+    public function delete_item_experience_for_admin($id) {
+        return $this->db->table('itinerary_items')
+            ->where('id', $id)
+            ->where('completed', 1)
+            ->update([
+                'share_experience' => 0,
+                'experience_notes' => null,
+            ]) !== false;
+    }
+
     public function items_for_day($trip_id, $day_number) {
         return $this->db->table('itinerary_items')
             ->where('trip_id', $trip_id)

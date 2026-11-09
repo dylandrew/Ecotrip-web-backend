@@ -70,6 +70,7 @@ $router->put('/api/v1/trips/{id}/experience', 'Api_trips::trip_experience_update
 $router->put('/api/v1/trips/{id}/items/{item_id}', 'Api_trips::itinerary_item_update')->where_number('id')->where_number('item_id');
 $router->delete('/api/v1/trips/{id}', 'Api_trips::trips_delete')->where_number('id');
 $router->get('/api/v1/experiences', 'Api_trips::shared_experiences');
+$router->post('/api/v1/experiences/{id}/copy', 'Api_trips::copy_shared_experience')->where_number('id');
 $router->get('/api/v1/stays', 'Api_stays::stays_index');
 $router->get('/api/v1/stays/nearby', 'Api_stays::stays_nearby');
 $router->get('/api/v1/stays/{id}', 'Api_stays::stays_show')->where_number('id');
@@ -98,6 +99,11 @@ $router->patch('/api/v1/admin/users/{id}/role', 'Api_admin::admin_update_user_ro
 $router->get('/api/v1/admin/trips', 'Api_admin::admin_trips');
 $router->patch('/api/v1/admin/trips/{id}', 'Api_admin::admin_update_trip')->where_number('id');
 $router->delete('/api/v1/admin/trips/{id}', 'Api_admin::admin_delete_trip')->where_number('id');
+$router->get('/api/v1/admin/experiences', 'Api_admin::admin_experiences');
+$router->patch('/api/v1/admin/experiences/trips/{id}', 'Api_admin::admin_update_trip_experience')->where_number('id');
+$router->delete('/api/v1/admin/experiences/trips/{id}', 'Api_admin::admin_delete_trip_experience')->where_number('id');
+$router->patch('/api/v1/admin/experiences/stops/{id}', 'Api_admin::admin_update_stop_experience')->where_number('id');
+$router->delete('/api/v1/admin/experiences/stops/{id}', 'Api_admin::admin_delete_stop_experience')->where_number('id');
 $router->get('/api/v1/admin/stays', 'Api_admin::admin_stays');
 $router->post('/api/v1/admin/stays', 'Api_admin::admin_save_stay');
 $router->delete('/api/v1/admin/stays/{id}', 'Api_admin::admin_delete_stay')->where_number('id');

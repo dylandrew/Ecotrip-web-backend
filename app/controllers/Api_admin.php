@@ -120,6 +120,94 @@ class Api_admin extends Api_v1 {
         api_json_response(200, ['deleted' => true]);
     }
 
+    public function admin_experiences() {
+        $this->require_admin();
+        api_json_response(200, ['experiences' => $this->Trip_model->all_experiences_for_admin()]);
+    }
+
+    public function admin_update_trip_experience($id) {
+        $this->require_admin();
+        $tripId = (int) $id;
+        $trip = $this->Trip_model->find_for_admin($tripId);
+        if (!$trip || $trip['status'] !== 'completed') {
+            api_json_response(404, null, 'NOT_FOUND', 'Completed trip not found.');
+        }
+
+        $body = $this->body();
+        $share = filter_var($body['share_experience'] ?? null, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+        $notes = is_string($body['experience_notes'] ?? null)
+            ? trim(strip_tags($body['experience_notes']))
+            : null;
+        $ratingValue = $body['experience_rating'] ?? null;
+        $rating = $ratingValue === null || $ratingValue === ''
+            ? null
+            : filter_var($ratingValue, FILTER_VALIDATE_INT);
+        if ($share === null || $notes === null || mb_strlen($notes) > 2000
+            || ($rating !== null && ($rating === false || $rating < 1 || $rating > 5))
+            || ($share && ($notes === '' || $rating === null))) {
+            api_json_response(422, null, 'VALIDATION_ERROR', 'Keep notes within 2,000 characters and provide notes and a 1–5 star rating before sharing.');
+        }
+        if (!$this->Trip_model->update_trip_experience_for_admin($tripId, $share, $notes, $rating)) {
+            api_json_response(500, null, 'UPDATE_FAILED', 'The shared trip experience could not be updated.');
+        }
+
+        $this->audit('experience.trip_updated', 'trip', $tripId);
+        api_json_response(200, ['updated' => true]);
+    }
+
+    public function admin_delete_trip_experience($id) {
+        $this->require_admin();
+        $tripId = (int) $id;
+        $trip = $this->Trip_model->find_for_admin($tripId);
+        if (!$trip || $trip['status'] !== 'completed') {
+            api_json_response(404, null, 'NOT_FOUND', 'Completed trip not found.');
+        }
+        if (!$this->Trip_model->delete_trip_experience_for_admin($tripId)) {
+            api_json_response(500, null, 'DELETE_FAILED', 'The shared trip experience could not be removed.');
+        }
+
+        $this->audit('experience.trip_removed', 'trip', $tripId);
+        api_json_response(200, ['removed' => true]);
+    }
+
+    public function admin_update_stop_experience($id) {
+        $this->require_admin();
+        $stopId = (int) $id;
+        $stop = $this->Trip_model->find_item_for_admin($stopId);
+        if (!$stop) {
+            api_json_response(404, null, 'NOT_FOUND', 'Completed itinerary stop not found.');
+        }
+
+        $body = $this->body();
+        $share = filter_var($body['share_experience'] ?? null, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+        $notes = is_string($body['experience_notes'] ?? null)
+            ? trim(strip_tags($body['experience_notes']))
+            : null;
+        if ($share === null || $notes === null || mb_strlen($notes) > 2000 || ($share && $notes === '')) {
+            api_json_response(422, null, 'VALIDATION_ERROR', 'Add notes of up to 2,000 characters before sharing this stop.');
+        }
+        if (!$this->Trip_model->update_item_experience_for_admin($stopId, $share, $notes)) {
+            api_json_response(500, null, 'UPDATE_FAILED', 'The shared itinerary stop could not be updated.');
+        }
+
+        $this->audit('experience.stop_updated', 'itinerary_item', $stopId);
+        api_json_response(200, ['updated' => true]);
+    }
+
+    public function admin_delete_stop_experience($id) {
+        $this->require_admin();
+        $stopId = (int) $id;
+        if (!$this->Trip_model->find_item_for_admin($stopId)) {
+            api_json_response(404, null, 'NOT_FOUND', 'Completed itinerary stop not found.');
+        }
+        if (!$this->Trip_model->delete_item_experience_for_admin($stopId)) {
+            api_json_response(500, null, 'DELETE_FAILED', 'The shared itinerary stop could not be removed.');
+        }
+
+        $this->audit('experience.stop_removed', 'itinerary_item', $stopId);
+        api_json_response(200, ['removed' => true]);
+    }
+
     public function admin_stays() {
         $this->require_admin();
         api_json_response(200, ['stays' => $this->Stay_model->all_stays()]);

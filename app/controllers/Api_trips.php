@@ -148,6 +148,71 @@ class Api_trips extends Api_v1 {
         ]);
     }
 
+    public function copy_shared_experience($id) {
+        $userId = $this->uid();
+        $source = $this->Trip_model->find_shared_trip_for_copy((int) $id);
+        if (!$source) {
+            api_json_response(404, null, 'NOT_FOUND', 'This shared trip reference is no longer available.');
+        }
+
+        $body = $this->body();
+        $title = is_string($body['title'] ?? null)
+            ? trim(strip_tags($body['title']))
+            : 'Copy of ' . $source['title'];
+        $trip = $this->validated_trip([
+            'title' => $title,
+            'destination' => $source['destination'],
+            'start_date' => $body['start_date'] ?? '',
+            'end_date' => $body['end_date'] ?? '',
+            'budget' => $body['budget'] ?? null,
+            'travelers' => $body['travelers'] ?? 1,
+            'status' => 'draft',
+        ]);
+        if (isset($trip['error'])) {
+            api_json_response(422, null, 'VALIDATION_ERROR', $trip['error']);
+        }
+
+        $start = new DateTimeImmutable($trip['start_date']);
+        $end = new DateTimeImmutable($trip['end_date']);
+        $duration = (int) $start->diff($end)->days + 1;
+        $sourceItems = $this->Trip_model->shared_trip_items_for_copy((int) $source['id']);
+        $items = [];
+        foreach ($sourceItems as $item) {
+            $day = (int) $item['day_number'];
+            $time = substr((string) $item['start_time'], 0, 5);
+            if ($day < 1 || $day > $duration || !preg_match('/^([01]\d|2[0-3]):[0-5]\d$/', $time)) {
+                api_json_response(422, null, 'INVALID_REFERENCE', 'Choose dates that cover all itinerary days in this reference.');
+            }
+            $items[] = [
+                'day' => $day,
+                'type' => $item['item_type'],
+                'description' => $item['description'],
+                'time' => $time,
+                'estimated_cost' => (float) $item['est_cost'],
+                'estimated_co2_kg' => (float) $item['est_co2_kg'],
+            ];
+        }
+
+        $trip['user_id'] = $userId;
+        $this->db->transaction();
+        try {
+            $tripId = $this->Trip_model->create_trip($trip);
+            if ($items) {
+                $this->Trip_model->add_generated_items($tripId, $items);
+            }
+            $this->db->commit();
+        } catch (Throwable $error) {
+            $this->db->roll_back();
+            throw $error;
+        }
+
+        api_audit_log($this->db, $userId, 'experience.copied', 'trip', $tripId);
+        api_json_response(201, [
+            'trip' => $this->Trip_model->find_for_user($tripId, $userId),
+            'items' => $this->Trip_model->items($tripId),
+        ]);
+    }
+
     private function validated_itinerary_item(array $body, array $trip) {
         $description = is_string($body['description'] ?? null)
             ? trim(strip_tags($body['description']))

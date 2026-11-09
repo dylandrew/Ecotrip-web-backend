@@ -12,6 +12,8 @@ class Admin_model extends Model {
             'pending_payments' => $this->db->table('bookings')->where('payment_status', 'pending')->count(),
             'photos' => $this->db->table('journal_entries')->count(),
             'pending_reminders' => $this->db->table('reminders')->where('status', 'pending')->count(),
+            'shared_experiences' => $this->db->table('trips')->where('status', 'completed')->where('share_experience', 1)->count()
+                + $this->db->table('itinerary_items')->where('completed', 1)->where('share_experience', 1)->count(),
         ];
     }
 }
