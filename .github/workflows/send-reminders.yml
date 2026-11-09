@@ -1,0 +1,68 @@
+name: Send trip reminder emails
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: send-trip-reminders
+  cancel-in-progress: false
+
+jobs:
+  send-reminders:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      APP_ENV: production
+      DB_DRIVER: mysql
+      DB_HOST: ${{ secrets.REMINDER_DB_HOST }}
+      DB_PORT: ${{ secrets.REMINDER_DB_PORT }}
+      DB_NAME: ${{ secrets.REMINDER_DB_NAME }}
+      DB_USER: ${{ secrets.REMINDER_DB_USER }}
+      DB_PASSWORD: ${{ secrets.REMINDER_DB_PASSWORD }}
+      DB_CHARSET: utf8mb4
+      MAIL_HOST: ${{ secrets.REMINDER_MAIL_HOST }}
+      MAIL_PORT: ${{ secrets.REMINDER_MAIL_PORT }}
+      MAIL_USERNAME: ${{ secrets.REMINDER_MAIL_USERNAME }}
+      MAIL_PASSWORD: ${{ secrets.REMINDER_MAIL_PASSWORD }}
+      MAIL_ENCRYPTION: ${{ secrets.REMINDER_MAIL_ENCRYPTION }}
+      MAIL_FROM_ADDRESS: ${{ secrets.REMINDER_MAIL_FROM_ADDRESS }}
+      MAIL_FROM_NAME: EcoTrip
+    steps:
+      - name: Check out backend
+        uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: curl, mbstring, pdo_mysql
+          coverage: none
+
+      - name: Validate reminder settings
+        shell: bash
+        run: |
+          for name in DB_HOST DB_PORT DB_NAME DB_USER DB_PASSWORD MAIL_HOST MAIL_PORT MAIL_USERNAME MAIL_PASSWORD MAIL_ENCRYPTION MAIL_FROM_ADDRESS; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Missing required repository secret for ${name}."
+              exit 1
+            fi
+          done
+          if [[ ! "$DB_PORT" =~ ^[0-9]+$ ]] || [[ ! "$MAIL_PORT" =~ ^[0-9]+$ ]]; then
+            echo "::error::Database and mail ports must be numeric."
+            exit 1
+          fi
+          if [[ "$MAIL_ENCRYPTION" != "tls" && "$MAIL_ENCRYPTION" != "ssl" ]]; then
+            echo "::error::REMINDER_MAIL_ENCRYPTION must be tls or ssl."
+            exit 1
+          fi
+
+      - name: Install production dependencies
+        run: composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
+
+      - name: Send due reminders
+        run: php console/cli.php reminders:send
