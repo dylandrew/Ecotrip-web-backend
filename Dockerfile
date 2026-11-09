@@ -15,6 +15,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /var/www/html
 COPY app ./app
+COPY console ./console
 COPY scheme ./scheme
 COPY public ./public
 COPY local-router.php ./local-router.php
