@@ -90,7 +90,6 @@ $router->get('/api/v1/reminders', 'Api_reminders::reminders_list');
 $router->post('/api/v1/reminders', 'Api_reminders::reminders_create');
 $router->put('/api/v1/reminders/{id}', 'Api_reminders::reminders_update')->where_number('id');
 $router->delete('/api/v1/reminders/{id}', 'Api_reminders::reminders_delete')->where_number('id');
-$router->post('/api/v1/cron/reminders', 'Api_cron::send_reminders');
 $router->get('/api/v1/dashboard', 'Api_dashboard::dashboard');
 $router->post('/api/v1/assistant/message', 'Api_dashboard::assistant');
 $router->get('/api/v1/admin', 'Api_admin::admin_overview');
