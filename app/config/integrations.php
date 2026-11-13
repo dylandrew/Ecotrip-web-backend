@@ -18,6 +18,7 @@ $environment = [
     'mail_encryption' => 'MAIL_ENCRYPTION',
     'mail_from_address' => 'MAIL_FROM_ADDRESS',
     'mail_from_name' => 'MAIL_FROM_NAME',
+    'reminder_cron_token' => 'REMINDER_CRON_TOKEN',
     'google_client_id' => 'GOOGLE_CLIENT_ID',
     'google_client_secret' => 'GOOGLE_CLIENT_SECRET',
     'google_redirect_uri' => 'GOOGLE_REDIRECT_URI',
