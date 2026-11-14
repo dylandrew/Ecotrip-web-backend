@@ -353,11 +353,22 @@ class Api_trips extends Api_v1 {
 
         $body = $this->body();
         $destination = trim((string) ($body['destination'] ?? ''));
+        $startingCity = trim((string) ($body['starting_city'] ?? ''));
         $start = DateTimeImmutable::createFromFormat('!Y-m-d', (string) ($body['start_date'] ?? ''));
         $end = DateTimeImmutable::createFromFormat('!Y-m-d', (string) ($body['end_date'] ?? ''));
         $budget = (float) ($body['budget'] ?? 0);
         $travelers = (int) ($body['travelers'] ?? 1);
-        if ($destination === '' || !$start || !$end || $end < $start || $budget <= 0 || $travelers < 1) {
+        if (mb_strlen($startingCity) > 100) {
+            api_json_response(422, null, 'VALIDATION_ERROR', 'Starting city or municipality must be 100 characters or fewer.');
+        }
+        if (
+            $destination === ''
+            || !$start
+            || !$end
+            || $end < $start
+            || $budget <= 0
+            || $travelers < 1
+        ) {
             api_json_response(422, null, 'VALIDATION_ERROR', 'Enter a destination, valid dates, a budget, and at least one traveler.');
         }
 
@@ -371,6 +382,7 @@ class Api_trips extends Api_v1 {
 
         $input = json_encode([
             'destination' => $destination,
+            'starting_city' => $startingCity,
             'start_date' => $start->format('Y-m-d'),
             'end_date' => $end->format('Y-m-d'),
             'days' => $days,
@@ -401,7 +413,7 @@ class Api_trips extends Api_v1 {
         ];
         $response = integration_gemini_interact(
             $input,
-            'Create a clear, practical low-carbon itinerary for the supplied destination and exact trip dates. Return scheduled items in chronological order with 24-hour HH:MM times. Include useful activities and travel transitions on every day, with realistic gaps and no overlapping plans; use no more than four items per day. Make the first and last days realistic for arrival and departure. Keep estimated costs in PHP and the total within the supplied budget. Never invent live availability, reservations, opening hours, or transport schedules. Keep descriptions concise and specific to the destination. Estimate emissions conservatively; use zero only for genuinely zero-emission activities.',
+            'Create a clear, practical low-carbon itinerary for the supplied destination and exact trip dates. Return scheduled items in chronological order with 24-hour HH:MM times. Include useful activities and travel transitions on every day, with realistic gaps and no overlapping plans; use no more than four items per day. When starting_city is supplied, make the first item on day 1 an outbound transport leg from that city or municipality to the destination, and include its cost in the budget. Make the first and last days realistic for arrival and departure. Keep estimated costs in PHP and the total within the supplied budget. Never invent live availability, reservations, opening hours, or transport schedules. Keep descriptions concise and specific to the destination. Estimate emissions conservatively; use zero only for genuinely zero-emission activities.',
             ['max_output_tokens' => 4096, 'thinking_level' => 'low'],
             ['type' => 'text', 'mime_type' => 'application/json', 'schema' => $schema]
         );

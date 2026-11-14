@@ -508,10 +508,21 @@ function integration_osm_photon_hotels(array $location, $destination) {
             'name' => $name,
             'address' => $address_parts ? implode(', ', $address_parts) : $destination,
             'kind' => 'Hotel',
+            'website' => integration_osm_website_url($properties['website'] ?? ''),
         ];
     }
 
     return $places;
+}
+
+function integration_osm_website_url($value) {
+    $website = trim((string) $value);
+    if ($website === '') return '';
+    if (!preg_match('/^https?:\/\//i', $website)) $website = 'https://' . $website;
+    if (!filter_var($website, FILTER_VALIDATE_URL)) return '';
+
+    $scheme = strtolower((string) parse_url($website, PHP_URL_SCHEME));
+    return in_array($scheme, ['http', 'https'], true) ? $website : '';
 }
 
 function integration_openstreetmap_hotels($destination) {
@@ -547,7 +558,7 @@ function integration_openstreetmap_hotels($destination) {
         }
     }
 
-    $results_cache_path = $cache_dir . DIRECTORY_SEPARATOR . 'accommodations-' . hash('sha256', strtolower('v3|' . implode('|', $endpoints) . '|' . $destination)) . '.json';
+    $results_cache_path = $cache_dir . DIRECTORY_SEPARATOR . 'accommodations-' . hash('sha256', strtolower('v4|' . implode('|', $endpoints) . '|' . $destination)) . '.json';
     $cached_places = integration_osm_cached_json($results_cache_path, 15 * 60);
     if ($cached_places !== null) return $cached_places;
 
@@ -601,6 +612,7 @@ function integration_openstreetmap_hotels($destination) {
                 'name' => $name,
                 'address' => $address,
                 'kind' => ucwords(str_replace('_', ' ', $kind)),
+                'website' => integration_osm_website_url($tags['contact:website'] ?? $tags['website'] ?? $tags['url'] ?? ''),
             ];
         }
     }
