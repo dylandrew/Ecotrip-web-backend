@@ -558,9 +558,16 @@ function integration_openstreetmap_hotels($destination) {
         }
     }
 
-    $results_cache_path = $cache_dir . DIRECTORY_SEPARATOR . 'accommodations-' . hash('sha256', strtolower('v4|' . implode('|', $endpoints) . '|' . $destination)) . '.json';
+    $results_cache_path = $cache_dir . DIRECTORY_SEPARATOR . 'accommodations-' . hash('sha256', strtolower('v5|' . implode('|', $endpoints) . '|' . $destination)) . '.json';
     $cached_places = integration_osm_cached_json($results_cache_path, 15 * 60);
     if ($cached_places !== null) return $cached_places;
+
+    $photon_places = integration_osm_photon_hotels($location, $destination);
+    if ($photon_places) {
+        $result = ['places' => $photon_places, 'error' => '', 'location' => $location['name']];
+        integration_osm_cache_json($results_cache_path, $result);
+        return $result;
+    }
 
     $query = '[out:json][timeout:8];('
         . 'nwr(around:5000,' . $location['lat'] . ',' . $location['lon'] . ')["tourism"~"^(hotel|hostel|guest_house|motel|resort|apartment|chalet|inn|camp_site)$"];'
@@ -589,7 +596,6 @@ function integration_openstreetmap_hotels($destination) {
         $body = null;
     }
     $places = [];
-    $photon_available = false;
     if (is_array($body)) {
         foreach (is_array($body['elements'] ?? null) ? $body['elements'] : [] as $element) {
             $tags = is_array($element['tags'] ?? null) ? $element['tags'] : [];
@@ -618,13 +624,9 @@ function integration_openstreetmap_hotels($destination) {
     }
 
     if (!$places) {
-        $photon_places = integration_osm_photon_hotels($location, $destination);
-        if ($photon_places !== null) {
-            $places = $photon_places;
-            $photon_available = true;
-        }
+        $places = $photon_places ?? [];
     }
-    if (!$places && !is_array($body) && !$photon_available) {
+    if (!$places && !is_array($body) && $photon_places === null) {
         return ['places' => [], 'error' => 'Nearby accommodation search is temporarily unavailable. Please try again shortly.'];
     }
 
